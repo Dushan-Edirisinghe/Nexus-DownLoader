@@ -340,53 +340,49 @@ export default function App() {
     setShowProgress(true);
     setDownloadProgress(0);
     
-    // Start visual progress
+    // Fast fake progress bar (Visual feedback only)
     let progress = 0;
     const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress > 90) progress = 90; // Hold at 90% until download starts
-      setDownloadProgress(Math.min(100, Math.round(progress)));
-    }, 400);
+      progress += 20;
+      setDownloadProgress(progress);
+      
+      if (progress >= 100) {
+        clearInterval(interval);
+        
+        if (format.url) {
+            // 1. Create a temporary invisible link
+            const link = document.createElement('a');
+            link.href = format.url;
+            link.target = '_blank'; // Open in new tab
+            link.rel = 'noopener noreferrer';
+            
+            // 2. Try to name the file (Browsers often ignore this for cross-origin, but we try)
+            link.download = `${result.title || 'download'}.${format.type.toLowerCase()}`;
+            
+            // 3. Trigger the click
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // 4. IMPORTANT: Instructions for the user
+            // We use a small timeout so the alert appears AFTER the tab opens
+            setTimeout(() => {
+                // Determine if mobile or desktop for better instructions
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                const msg = isMobile 
+                    ? "If the video plays, Tap & Hold the video and select 'Download Video' or 'Save to Files'."
+                    : "Your download is starting.\n\nIf the video plays in a new tab, Right-Click the video and select 'Save Video As...'.";
+                
+                alert(msg);
+                setShowProgress(false);
+            }, 500);
 
-    if (format.url) {
-      // 1. Fetch the file as a "Blob" (Binary Large Object)
-      fetch(format.url)
-        .then(response => response.blob())
-        .then(blob => {
-          // 2. Create a temporary URL for this blob
-          const blobUrl = window.URL.createObjectURL(blob);
-          
-          // 3. Create a fake invisible link
-          const link = document.createElement('a');
-          link.href = blobUrl;
-          
-          // 4. Set the filename (e.g., "video.mp4")
-          link.download = `${result.title || 'download'}.${format.type.toLowerCase()}`;
-          
-          // 5. Click it automatically
-          document.body.appendChild(link);
-          link.click();
-          
-          // 6. Cleanup
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(blobUrl);
-
-          // Finish progress bar
-          clearInterval(interval);
-          setDownloadProgress(100);
-        })
-        .catch(err => {
-          console.error("Download failed:", err);
-          alert("Direct download failed. Opening in new tab instead.");
-          window.open(format.url, '_blank'); // Fallback if fetch fails
-          clearInterval(interval);
-          setShowProgress(false);
-        });
-    } else {
-       alert("Error: No link found.");
-       clearInterval(interval);
-       setShowProgress(false);
-    }
+        } else {
+            alert("Error: Source link not found.");
+            setShowProgress(false);
+        }
+      }
+    }, 100); // Fast interval
   };
 
   const filteredFormats = result ? result.formats.filter(f => f.category === activeTab) : [];
@@ -627,5 +623,6 @@ export default function App() {
   );
 
 }
+
 
 
