@@ -340,49 +340,43 @@ export default function App() {
     setShowProgress(true);
     setDownloadProgress(0);
     
-    // Fast fake progress bar (Visual feedback only)
+    // Visual progress bar
     let progress = 0;
     const interval = setInterval(() => {
-      progress += 20;
-      setDownloadProgress(progress);
-      
-      if (progress >= 100) {
-        clearInterval(interval);
-        
-        if (format.url) {
-            // 1. Create a temporary invisible link
-            const link = document.createElement('a');
-            link.href = format.url;
-            link.target = '_blank'; // Open in new tab
-            link.rel = 'noopener noreferrer';
-            
-            // 2. Try to name the file (Browsers often ignore this for cross-origin, but we try)
-            link.download = `${result.title || 'download'}.${format.type.toLowerCase()}`;
-            
-            // 3. Trigger the click
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // 4. IMPORTANT: Instructions for the user
-            // We use a small timeout so the alert appears AFTER the tab opens
-            setTimeout(() => {
-                // Determine if mobile or desktop for better instructions
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                const msg = isMobile 
-                    ? "If the video plays, Tap & Hold the video and select 'Download Video' or 'Save to Files'."
-                    : "Your download is starting.\n\nIf the video plays in a new tab, Right-Click the video and select 'Save Video As...'.";
-                
-                alert(msg);
-                setShowProgress(false);
-            }, 500);
+      progress += 10;
+      setDownloadProgress(Math.min(95, progress)); // Hold at 95%
+    }, 200);
 
-        } else {
-            alert("Error: Source link not found.");
+    if (format.url) {
+        // Stop the visual interval
+        clearInterval(interval);
+        setDownloadProgress(100);
+
+        // --- THE FIX: USE BACKEND PROXY ---
+        // 1. Get the Backend URL
+        const API_ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/extract';
+        const DOWNLOAD_ENDPOINT = API_ENDPOINT.replace('/extract', '/download');
+
+        // 2. Construct the Proxy URL
+        // We use the proxy so we can force "Content-Disposition: attachment"
+        const title = result.title ? result.title.replace(/[^a-z0-9]/gi, '_') : 'video';
+        const filename = `${title}.${format.type.toLowerCase()}`;
+        const finalUrl = `${DOWNLOAD_ENDPOINT}?url=${encodeURIComponent(format.url)}&filename=${encodeURIComponent(filename)}`;
+
+        // 3. Trigger Download
+        // Using window.location.href forces the browser to handle the file.
+        // Since headers say "attachment", it will download instead of navigate.
+        window.location.href = finalUrl;
+
+        setTimeout(() => {
             setShowProgress(false);
-        }
-      }
-    }, 100); // Fast interval
+        }, 1000);
+
+    } else {
+        alert("Error: Source link not found.");
+        clearInterval(interval);
+        setShowProgress(false);
+    }
   };
 
   const filteredFormats = result ? result.formats.filter(f => f.category === activeTab) : [];
@@ -623,6 +617,7 @@ export default function App() {
   );
 
 }
+
 
 
 
