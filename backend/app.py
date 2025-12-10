@@ -30,17 +30,17 @@ def get_video_info(url):
             formats = []
             # Process video formats
             for f in info.get('formats', []):
-                # Simple filter to get good MP4s and MP3s (simplified for demo)
-                if f.get('ext') == 'mp4' and f.get('height'):
-                   formats.append({
-    "id": f.get('format_id'),
-    "quality": f"{f.get('height')}p {f.get('vcodec', '')[:4]}",
-    "type": "MP4",
-    "size": format_size(f.get('filesize') or f.get('filesize_approx') or 0),
-    "category": "video",
-    "badge": "HD" if f.get('height', 0) >= 720 else "",
-    "url": f.get('url')  # <--- THIS IS THE FIX
-})
+                # FIX: Check if extension is mp4, has height, AND HAS AUDIO (acodec != 'none')
+                if f.get('ext') == 'mp4' and f.get('height') and f.get('acodec') != 'none':
+                    formats.append({
+                        "id": f.get('format_id'),
+                        "quality": f"{f.get('height')}p {f.get('vcodec', '')[:4]}",
+                        "type": "MP4",
+                        "size": format_size(f.get('filesize') or f.get('filesize_approx') or 0),
+                        "category": "video",
+                        "badge": "HD" if f.get('height', 0) >= 720 else "",
+                        "url": f.get('url')
+                    })
             
             # Add a mock audio format for demonstration (yt-dlp handles audio differently)
             formats.append({
@@ -85,3 +85,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(host='0.0.0.0', port=port)
+
