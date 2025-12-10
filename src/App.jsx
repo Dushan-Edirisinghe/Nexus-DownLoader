@@ -73,6 +73,7 @@ const extractVideoData = async (url, platform) => {
   
   // PRODUCTION CONFIGURATION
   // This correctly reads the VITE_API_URL environment variable from Vercel
+  // If running locally, it falls back to localhost
   const API_ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/extract';
 
   if (!USE_MOCK_DATA) {
@@ -587,3 +588,4 @@ export default function App() {
   );
 
 }
+
