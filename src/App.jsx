@@ -339,15 +339,54 @@ export default function App() {
   const handleDownload = (format) => {
     setShowProgress(true);
     setDownloadProgress(0);
+    
+    // Start visual progress
     let progress = 0;
     const interval = setInterval(() => {
       progress += Math.random() * 15;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-      }
+      if (progress > 90) progress = 90; // Hold at 90% until download starts
       setDownloadProgress(Math.min(100, Math.round(progress)));
-    }, 400); 
+    }, 400);
+
+    if (format.url) {
+      // 1. Fetch the file as a "Blob" (Binary Large Object)
+      fetch(format.url)
+        .then(response => response.blob())
+        .then(blob => {
+          // 2. Create a temporary URL for this blob
+          const blobUrl = window.URL.createObjectURL(blob);
+          
+          // 3. Create a fake invisible link
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          
+          // 4. Set the filename (e.g., "video.mp4")
+          link.download = `${result.title || 'download'}.${format.type.toLowerCase()}`;
+          
+          // 5. Click it automatically
+          document.body.appendChild(link);
+          link.click();
+          
+          // 6. Cleanup
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
+
+          // Finish progress bar
+          clearInterval(interval);
+          setDownloadProgress(100);
+        })
+        .catch(err => {
+          console.error("Download failed:", err);
+          alert("Direct download failed. Opening in new tab instead.");
+          window.open(format.url, '_blank'); // Fallback if fetch fails
+          clearInterval(interval);
+          setShowProgress(false);
+        });
+    } else {
+       alert("Error: No link found.");
+       clearInterval(interval);
+       setShowProgress(false);
+    }
   };
 
   const filteredFormats = result ? result.formats.filter(f => f.category === activeTab) : [];
@@ -588,4 +627,5 @@ export default function App() {
   );
 
 }
+
 
