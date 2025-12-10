@@ -69,19 +69,11 @@ const getPlatformConfig = (url) => {
  */
 const extractVideoData = async (url, platform) => {
   // SET THIS TO FALSE TO USE REAL BACKEND
-  // For the preview to work without a backend, we can set this to TRUE.
-  // When you deploy, set this to FALSE.
   const USE_MOCK_DATA = false; 
   
-  // --- IMPORTANT FOR VERCEL DEPLOYMENT ---
-  In the preview environment, `import.meta.env` causes issues.
-  // I have commented it out for now. 
-  // WHEN YOU COPY THIS TO YOUR PROJECT, UNCOMMENT THE LINE BELOW:
-  
-  // const API_ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/extract';
-  
-  // For now, we use this:
-  const API_ENDPOINT = 'http://localhost:5000/api/extract'; 
+  // PRODUCTION CONFIGURATION
+  // This correctly reads the VITE_API_URL environment variable from Vercel
+  const API_ENDPOINT = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/extract';
 
   if (!USE_MOCK_DATA) {
     try {
@@ -593,4 +585,5 @@ export default function App() {
       )}
     </div>
   );
+
 }
