@@ -1,7 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 import yt_dlp
 import os
+import urllib.request
 
 app = Flask(__name__)
 # Enable CORS for all routes (Allows Vercel frontend to talk to Render backend)
@@ -77,7 +78,33 @@ def extract():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/', methods=['GET'])
+@app.route('/api/download', methods=['GET'])
+def download_proxy():
+    video_url = request.args.get('url')
+    filename = request.args.get('filename', 'video.mp4')
+    
+    if not video_url:
+        return "Missing URL", 400
+
+    # Stream the file from the source to the client
+    def generate():
+        try:
+            # Use a generic user agent to avoid 403 Forbidden errors
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+            req = urllib.request.Request(video_url, headers=headers)
+            with urllib.request.urlopen(req) as conn:
+                while True:
+                    chunk = conn.read(4096)
+                    if not chunk:
+                        break
+                    yield chunk
+        except Exception as e:
+            print(f"Download Error: {e}")
+
+    return Response(stream_with_context(generate()), headers={
+        'Content-Disposition': f'attachment; filename="{filename}"',
+        'Content-Type': 'application/octet-stream'
+    })
 def health_check():
     return "NEXUS Backend is Running!"
 
@@ -85,4 +112,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(host='0.0.0.0', port=port)
+
 
